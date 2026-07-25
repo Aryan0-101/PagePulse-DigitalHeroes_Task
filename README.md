@@ -1,6 +1,6 @@
 # Page Pulse
 
-A small web application that audits any URL: it fetches the page, measures how long that took, and reports a handful of useful facts about the page — its title, meta description, heading structure, image accessibility, and approximate word count.
+My submission to Digital Heroes Training task 'Page Pulse': A small web application that audits any URL: it fetches the page, measures how long that took, and reports a handful of useful facts about the page — its title, meta description, heading structure, image accessibility, and approximate word count.
 
 
 ---
