@@ -1,33 +1,40 @@
 :root {
-  /* Surfaces */
-  --bg: oklch(98% 0.004 258);
-  --surface: oklch(100% 0 0);
-  --ink: oklch(18% 0.02 258);
-  --ink-muted: oklch(40% 0.02 258);
-  --ink-faint: oklch(52% 0.015 258);
-  --rule: oklch(89% 0.006 258);
-  --rule-strong: oklch(78% 0.008 258);
+  /* Digital Heroes Palette (Light Mode) */
+  --ink-0: #0a0a1a;
+  --moss-500: #6fa37a;
+  --moss-600: #3f6b54;
+  --moss-700: #24453a;
+  --moss-900: #0f1713;
+  --amber-500: #cd8a4b;
 
-  /* Single brand accent — used for primary actions, focus, links, and the "Good" score band only */
-  --accent: oklch(38% 0.14 258);
-  --accent-hover: oklch(32% 0.14 258);
-  --accent-ink: oklch(100% 0 0);
-  --accent-wash: oklch(94% 0.02 258);
+  --bg: #FFFDF9; /* Cream base for light mode */
+  --surface: rgba(255, 255, 255, 0.7);
+  --surface-alt: #EBE7DF;
+  
+  --ink: var(--moss-900);
+  --ink-muted: var(--moss-600);
+  --ink-faint: var(--moss-500);
+  
+  --rule: rgba(63, 107, 84, 0.22);
+  --rule-strong: rgba(63, 107, 84, 0.4);
 
-  /* Semantic score bands (data-driven, not decorative) */
-  --score-excellent: oklch(45% 0.14 165);
-  --score-good: var(--accent);
-  --score-fair: oklch(55% 0.16 70);
-  --score-poor: oklch(48% 0.19 25);
-  --score-poor-wash: oklch(95% 0.03 25);
+  --accent: var(--moss-600);
+  --accent-hover: var(--moss-700);
+  --accent-ink: #FFFFFF;
+  --accent-wash: rgba(63, 107, 84, 0.1);
 
-  /* Error */
-  --error: oklch(48% 0.19 25);
-  --error-wash: oklch(96% 0.02 25);
-  --error-border: oklch(82% 0.08 25);
+  --score-excellent: var(--moss-700);
+  --score-good: var(--moss-600);
+  --score-fair: var(--amber-500);
+  --score-poor: #B5838D;
 
-  --font-body: 'Geist', system-ui, 'Segoe UI', Roboto, sans-serif;
-  --font-mono: 'Geist Mono', ui-monospace, Consolas, monospace;
+  --error: #D90429;
+  --error-wash: #FFF0F3;
+  --error-border: #FFB3C1;
+
+  --font-body: 'Inter', system-ui, sans-serif;
+  --font-heading: 'Space Grotesk', system-ui, sans-serif;
+  --font-mono: 'JetBrains Mono', ui-monospace, monospace;
 
   font: 16px/1.5 var(--font-body);
   color-scheme: light;
@@ -45,16 +52,25 @@ body {
   margin: 0;
 }
 
+/* === Grain overlay (print-tactile) === */
+body::before {
+  content: ''; position: fixed; inset: 0; pointer-events: none; z-index: 60;
+  background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='200' height='200'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2'/><feColorMatrix values='0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0.06 0'/></filter><rect width='100%25' height='100%25' filter='url(%23n)'/></svg>");
+  opacity: 0.6; mix-blend-mode: overlay;
+}
+
 #root {
   min-height: 100svh;
   display: flex;
   flex-direction: column;
 }
 
-h1, h2, h3 {
+h1, h2, h3, h4, h5, h6 {
+  font-family: var(--font-heading);
   color: var(--ink);
-  font-weight: 600;
+  font-weight: 700;
   margin: 0;
+  letter-spacing: -0.02em;
   text-wrap: balance;
 }
 
@@ -64,6 +80,7 @@ p {
 
 a {
   color: var(--accent);
+  text-decoration: none;
 }
 
 @media (prefers-reduced-motion: reduce) {

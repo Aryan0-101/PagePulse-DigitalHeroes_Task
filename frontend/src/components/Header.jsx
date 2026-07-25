@@ -2,8 +2,11 @@ export default function Header() {
   return (
     <header className="app-header">
       <div className="app-header__inner">
-        <div className="app-header__logo">Page Pulse</div>
-        <span className="app-header__tag">URL Audit Tool</span>
+        <div className="dh-logo-group">
+          <span className="dh-brand">Digital Heroes</span>
+          <span className="dh-sep">/</span>
+          <span className="dh-product">URL Auditor</span>
+        </div>
       </div>
     </header>
   );

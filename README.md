@@ -27,8 +27,9 @@ A small web application that audits any URL: it fetches the page, measures how l
 
 ## 1. Project Overview
 
-Page Pulse lets a user paste in any web address and get back a quick "health check" of that page. Type a URL, click **Audit URL**, and within a couple of seconds you see:
+Page Pulse lets a user paste in any web address and get back a quick "health check" of that page. Type a URL, click **Run audit**, and within a couple of seconds you see:
 
+- An overall **Page Pulse Score** out of 100, summarizing the findings at a glance
 - Whether the page responded successfully, and how fast
 - What the page is called (its title) and how it describes itself (its meta description)
 - How its headings are structured
@@ -45,7 +46,9 @@ The intended workflow is deliberately simple: **one input, one button, one repor
 - **Heading structure** — count of `<h1>` elements on the page.
 - **Image accessibility inspection** — count of `<img>` elements missing usable `alt` text (missing attribute or empty string).
 - **Word count** — an approximate count of words in the visible body text.
+- **Page Pulse Score** — a 0–100 summary score derived on the frontend from the fields above, with a plain-language band (Excellent / Good / Fair / Poor). Purely a presentation layer over data the API already returns; the backend does not compute or send it.
 - **Graceful error handling** — invalid URLs, timeouts, and non-HTML responses all return a clear, structured error instead of a crash or a stack trace.
+- **Accessible, motion-aware UI** — a modern, glassmorphic dashboard layout featuring translucent cards, soft drop shadows, and a responsive CSS-generated orb (inspired by the Digital Heroes aesthetic), with animations gracefully disabling for users who set `prefers-reduced-motion`.
 
 ## 3. Technology Overview
 
@@ -79,6 +82,8 @@ Cheerio takes a raw HTML string and parses it into a DOM-like tree, then exposes
 
 **State management:** All meaningful state (the URL being typed, the current phase of the audit, the report, any error) lives in `App.jsx` via React's `useState` hook and is passed down to child components as props. There's no need for a larger state-management library at this scale.
 
+**Motion and derived display values:** Two small local modules support the UI without adding dependencies — `hooks/useCountUp.js` animates a number from 0 to its target using `requestAnimationFrame`, and `utils/score.js` derives the Page Pulse Score and its band from the report. All motion is CSS-driven (keyframes and transitions) rather than an animation library.
+
 **Vite** is the build tool that turns the React source code into an optimized bundle and provides the fast local dev server (`npm run dev`) with instant hot-reload.
 
 ### Testing framework — Node's built-in test runner (`node:test`)
@@ -109,6 +114,8 @@ Page Pulse/
 ├── frontend/                   React + Vite single-page app
 │   └── src/
 │       ├── components/          UrlInput, Loading, ErrorMessage, AuditReport, Header, Footer
+│       ├── hooks/               useCountUp.js — number count-up animation
+│       ├── utils/               score.js — derives the Page Pulse Score
 │       ├── services/            auditApi.js — talks to the backend
 │       ├── App.jsx               Top-level state + composition
 │       └── main.jsx              React entry point
@@ -127,14 +134,16 @@ Page Pulse/
 | `backend/src/services` (root) | Orchestrate: validate → fetch → parse → shape the response. | A URL string | The final audit response object | `utils`, `fetcher`, `parser`, `models` |
 | `backend/src/models` | Define the exact shape of success and error responses. | Raw values | Response-shaped plain objects | none |
 | `backend/src/utils` | URL validation and a small hierarchy of typed, user-facing error classes. | — | — | none |
-| `frontend/src/components` | Presentational pieces of the single page — each owns one visual concern. | Props | Rendered JSX | `index.css` / `App.css` |
+| `frontend/src/components` | Presentational pieces of the single page — each owns one visual concern. | Props | Rendered JSX | `index.css` / `App.css`, `hooks`, `utils` |
+| `frontend/src/hooks` | Reusable stateful UI behavior (currently the count-up animation). | A target number | An animating number | React |
+| `frontend/src/utils` | Pure display-layer calculations (the Page Pulse Score and its band). | A report object | A score number / band descriptor | none |
 | `frontend/src/services` | The only place that knows the backend's base URL and fetch details. | A URL string | Parsed JSON or a thrown `Error` | native `fetch` |
 
 ## 5. Request Lifecycle
 
 This is the complete path a single audit takes, from keystroke to rendered report:
 
-1. **User enters a URL** into the input field and clicks **Audit URL** (or presses Enter).
+1. **User enters a URL** into the input field and clicks **Run audit** (or presses Enter).
 2. **Frontend validates basic input** — the submit button is disabled while the field is empty, and the raw text is normalized: if it doesn't already start with `http://` or `https://`, `https://` is prepended (`normalizeUrl` in `App.jsx`).
 3. **Request sent to backend** — `auditApi.js` sends `POST /audit` with `{ "url": "..." }` as JSON.
 4. **Backend validates the URL** — `utils/urlValidator.js` checks that the string parses as a URL with an `http:`/`https:` protocol. If not, an `InvalidUrlError` is thrown immediately and no network request is made.
@@ -143,8 +152,8 @@ This is the complete path a single audit takes, from keystroke to rendered repor
 7. **HTML verified** — the fetcher inspects the `Content-Type` response header. If it doesn't contain `text/html`, a `NonHtmlError` is thrown and the body is never even read.
 8. **Parser extracts information** — the HTML body is handed to Cheerio, which extracts the title, meta description, heading count, image alt-text audit, and word count.
 9. **JSON response created** — `models/auditModels.js` assembles the final `{ status, response_time_ms, page_title, meta_description, h1_count, images_missing_alt, approximate_word_count }` object.
-10. **Frontend renders report** — on success, `App.jsx` stores the result and switches to the "report" phase; `AuditReport.jsx` renders it as a stat grid and detail panel. On failure, the thrown error's message is shown via `ErrorMessage.jsx`.
-11. **User sees results** — either a fully-populated report card, or a clear, human-readable error message. Nothing ever crashes the page.
+10. **Frontend renders report** — on success, `App.jsx` stores the result and switches to the "report" phase; `AuditReport.jsx` derives the Page Pulse Score from the response and renders it as a scored, ruled report. On failure, the thrown error's message is shown via `ErrorMessage.jsx`.
+11. **User sees results** — either a fully-populated scored report, or a clear, human-readable error message. Nothing ever crashes the page.
 
 ## 6. Backend Explanation
 
@@ -220,6 +229,8 @@ App
 ├── ErrorMessage     (phase: input, if an error occurred)
 ├── Loading          (phase: loading)
 ├── AuditReport      (phase: report)
+│   ├── useCountUp    hook — animates the score and word count
+│   └── score.js      util — derives the score and its band
 └── Footer
 ```
 
@@ -229,11 +240,22 @@ App
 
 ### Loading states
 
-`App` tracks a single `phase` state variable: `'input' | 'loading' | 'report'`. Submitting a URL sets `phase` to `'loading'` immediately, which swaps `UrlInput` out for the `Loading` spinner. When the API call resolves (success or failure), `phase` moves to `'report'` or back to `'input'` respectively.
+`App` tracks a single `phase` state variable: `'input' | 'loading' | 'report'`. Submitting a URL sets `phase` to `'loading'` immediately, which swaps `UrlInput` out for the `Loading` component — an indeterminate progress rule with a cycling stage label ("Connecting", "Fetching page", "Parsing markup", "Scoring results"). The labels are presentational pacing, not real backend progress events. When the API call resolves (success or failure), `phase` moves to `'report'` or back to `'input'` respectively.
 
 ### Rendering logic
 
 Only one phase's UI is mounted at a time — `App.jsx` uses simple conditional rendering (`phase === 'input' && ...`) rather than hiding/showing all three with CSS, so there's exactly one obvious state to reason about at any moment. A CSS `fade-in` or `slide-up` animation plays as each phase mounts.
+
+### Visual design and motion
+
+The interface is designed with a premium, glassmorphic aesthetic modeled after digitalheroesco.com. It features a soft cream background, a pill-shaped input form, translucent glass cards with backdrop blurring, and a CSS-rendered 3D orb. The report results render as a sophisticated dashboard widget grid replacing the simple ruled rows, grouping metrics into distinct cards like Response Metrics, Structure, Accessibility, and Page Content & Metadata.
+
+Motion is scoped to two moments that convey state rather than decorate it:
+
+1. **Phase transitions** — a short fade/slide as each phase mounts.
+2. **Score reveal** — numerical scores count up from 0 (`useCountUp`), such as the Page Pulse Score and the approximate word count.
+
+Every animation is nullified under `@media (prefers-reduced-motion: reduce)`, and `useCountUp` checks the same preference in JavaScript so the number appears at its final value instead of animating. Icons are inline SVG, so the UI depends on no icon webfont.
 
 ### Error handling
 
@@ -408,6 +430,22 @@ npm test
 
 **Why this fits:** A single, predictable error contract means the frontend needs exactly one code path to handle *any* failure (`ErrorMessage` just renders `err.message`), with no special-casing per error type. It also guarantees the API never leaks a raw stack trace to a client, satisfying the requirement that the application "never crashes and always returns meaningful responses."
 
+### Decision 4: The Page Pulse Score is computed on the frontend, not the backend
+
+**Chosen approach:** Derive the 0–100 summary score in `frontend/src/utils/score.js` from the fields the API already returns, leaving the documented API contract untouched.
+
+**Alternatives considered:** Returning a `score` field from `POST /audit`. That would make the score authoritative and available to any future API consumer, but it also bakes a subjective weighting (how much is a missing alt attribute "worth"?) into the data contract, and every tweak to the weighting becomes a breaking API change.
+
+**Why this fits:** The score is a presentation aid — a way to give the user an instant read before they scan the details — not a measurement. Keeping it in the display layer means the API continues to report only facts it actually observed, the weighting can be adjusted freely without touching or re-testing the backend, and the parser tests stay focused on extraction correctness.
+
+### Decision 5: Motion built on CSS with a JavaScript-free fallback, no animation library
+
+**Chosen approach:** Implement all motion with CSS keyframes and transitions, plus one ~25-line `useCountUp` hook using `requestAnimationFrame`. Honor `prefers-reduced-motion` in both CSS (a global override) and JavaScript (the hook sets the final value immediately).
+
+**Alternatives considered:** An animation library such as Framer Motion or GSAP. Both are excellent, but they would add a runtime dependency an order of magnitude larger than the animation actually needed here, for effects — fades, a count-up, a staggered list — that CSS expresses natively.
+
+**Why this fits:** The animation requirements are modest and declarative, so CSS is the right tool and the bundle stays small. Handling reduced motion in both layers matters because a CSS-only override cannot stop a `requestAnimationFrame` loop; checking the preference in the hook as well means motion-sensitive users genuinely get a static interface rather than a visually-frozen but still-running animation.
+
 ## 12. Running the Project
 
 ### Prerequisites
@@ -460,7 +498,7 @@ You should see Vite print a local URL, typically:
 
 ### Opening the application
 
-Open `http://localhost:5173` in a browser. Enter a URL (e.g. `example.com`) and click **Audit URL**.
+Open `http://localhost:5173` in a browser. Enter a URL (e.g. `example.com`) and click **Run audit**.
 
 ### Running tests
 
@@ -568,35 +606,47 @@ npm test
 
 **`frontend/src/components/Header.jsx`**
 - **Purpose:** Static top bar showing the app name.
-- **Responsibilities:** Render the "Page Pulse" logo/wordmark.
+- **Responsibilities:** Render the "Page Pulse" wordmark and the "URL Audit Tool" descriptor.
 - **Imports/Exports:** None besides the default component export.
 
 **`frontend/src/components/UrlInput.jsx`**
 - **Purpose:** Collect a URL from the user.
-- **Responsibilities:** Render the `https://` prefix, the text input, and the submit button; call `onSubmit` on form submission.
+- **Responsibilities:** Render a prominent, pill-shaped input row with an integrated "Audit Now" button; call `onSubmit` on form submission.
 - **Props:** `value`, `onChange`, `onSubmit`, `disabled`.
 - **Interacts with:** Controlled entirely by `App.jsx`'s state.
 
 **`frontend/src/components/Loading.jsx`**
 - **Purpose:** Displayed while an audit is in flight.
-- **Responsibilities:** Render a spinner and a short status message.
+- **Responsibilities:** Render an indeterminate progress rule and a cycling stage label; skip the cycling entirely when the user prefers reduced motion.
 - **Props:** None.
 
 **`frontend/src/components/ErrorMessage.jsx`**
 - **Purpose:** Displayed when an audit fails.
-- **Responsibilities:** Render the error message passed in, or nothing at all if there is no error.
+- **Responsibilities:** Render an inline SVG warning icon and the error message passed in, or nothing at all if there is no error.
 - **Props:** `message`.
 
 **`frontend/src/components/AuditReport.jsx`**
 - **Purpose:** Displayed after a successful audit.
-- **Responsibilities:** Render HTTP status (as a pill), response time (as a bar), page title, meta description, `h1` count, word count, and an accessibility callout for missing alt text.
+- **Responsibilities:** Renders a modern grid dashboard consisting of a Page Pulse Score card and focused metric cards for Response Metrics, Structure, Accessibility, and Page Content & Metadata.
 - **Props:** `report`, `targetUrl`, `onReset`.
-- **Interacts with:** The `report` object returned by the backend via `auditApi.js`.
+- **Interacts with:** `hooks/useCountUp.js`, `utils/score.js`, and the `report` object returned by the backend via `auditApi.js`.
 
 **`frontend/src/components/Footer.jsx`**
 - **Purpose:** Static footer.
-- **Responsibilities:** Render a copyright line.
+- **Responsibilities:** Render the attribution link to the Digital Heroes site.
 - **Props:** None.
+
+**`frontend/src/hooks/useCountUp.js`**
+- **Purpose:** Animate a number from 0 up to a target value.
+- **Responsibilities:** Drive the count with `requestAnimationFrame` and an ease-out-quint curve; return the target immediately if the user prefers reduced motion; cancel the frame on unmount.
+- **Exports:** `useCountUp(target, { duration })` → the current number.
+- **Interacts with:** Used by `components/AuditReport.jsx`.
+
+**`frontend/src/utils/score.js`**
+- **Purpose:** Turn a report into a single summary score.
+- **Responsibilities:** `computeScore(report)` starts at 100 and deducts for a non-2xx status, slow responses, an `h1` count other than 1, a missing title or description, and each image missing alt text (capped), clamped to 0–100. `scoreBand(score)` maps that number to a label and the CSS variable for its color.
+- **Exports:** `computeScore(report)`, `scoreBand(score)`.
+- **Interacts with:** Used by `components/AuditReport.jsx`. Pure functions — no React, no network.
 
 **`frontend/src/services/auditApi.js`**
 - **Purpose:** The single point of contact with the backend API.
@@ -606,11 +656,11 @@ npm test
 
 **`frontend/src/index.css`**
 - **Purpose:** Global design tokens and resets.
-- **Responsibilities:** CSS custom properties for the color palette and typography, box-sizing reset, base heading styles, and Material Symbols icon font configuration.
+- **Responsibilities:** Define the soft cream background, dark green accents, font families (`Geist`/`Inter`), box-sizing resets, and the global `prefers-reduced-motion` override that disables all animation and transition.
 
 **`frontend/src/App.css`**
 - **Purpose:** Layout and component styling for the whole app.
-- **Responsibilities:** Header/footer layout, hero section, the URL form, buttons, the loading spinner, the error alert, and the full report card (grid, status pill, response bar, callouts), plus the fade/slide-up transition animations between phases.
+- **Responsibilities:** Applies the glassmorphic aesthetic (backdrop blurs, translucent cards, soft shadows), styles the CSS-rendered 3D orb in the hero section, the feature grid, the pill-shaped URL form, and the report dashboard layout.
 
 ## 14. Glossary
 
@@ -629,7 +679,12 @@ npm test
 - **Unit Test:** A test that exercises one small piece of code (here, a single function) in isolation from the rest of the system.
 - **Module:** A single file of code with its own imports and exports — the basic unit of organization in this project's backend and frontend.
 - **Component:** A self-contained, reusable piece of a React UI that renders based on the props and state it's given.
+- **Hook:** A React function (prefixed `use...`) that lets a component use stateful behavior — here, `useCountUp` animates a number over time.
+- **Design token:** A named value (a color, a font, a spacing step) defined once as a CSS custom property and reused everywhere, so the whole interface can be adjusted from one place.
+- **`prefers-reduced-motion`:** A setting users can enable in their operating system to request less animation, usually because motion causes them discomfort. Well-built interfaces detect it and disable animation accordingly.
 
 ## 15. Known Limitations
 
 - **Client-rendered (SPA) pages report low or zero counts.** The fetcher retrieves only the raw HTML a server sends — it does not execute JavaScript. For a page built with a client-side framework (e.g. a React or Vue app that renders its content in the browser after load), the raw HTML may be little more than `<div id="root"></div>`, so `h1_count` and `approximate_word_count` will correctly report `0` even though a real browser would show a full page. `page_title` and `meta_description` are unaffected, since those typically live in the static `<head>` regardless of how the page renders its body. Supporting this properly would require executing the page's JavaScript via a headless browser (e.g. Playwright), which was a deliberate scope decision to leave out — it adds a much heavier dependency and significantly slower per-audit latency for a capability outside this project's original requirements.
+
+- **The Page Pulse Score is indicative, not authoritative.** Its weightings (see [Decision 4](#11-design-decisions)) are a reasonable heuristic chosen for this project, not an industry standard, and it inherits the limitation above: a client-rendered page will score lower because the metrics it is built from legitimately read as zero. The individual fields in the report are the real measurements; the score is a convenience summary layered on top of them.

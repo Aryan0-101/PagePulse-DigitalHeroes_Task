@@ -11,7 +11,7 @@ export function computeScore(report) {
   if (report.h1_count !== 1) score -= 10;
   if (!report.page_title) score -= 10;
   if (!report.meta_description) score -= 5;
-  score -= Math.min(30, report.images_missing_alt * 5);
+  score -= Math.min(10, report.images_missing_alt * 2);
 
   return Math.max(0, Math.min(100, Math.round(score)));
 }
