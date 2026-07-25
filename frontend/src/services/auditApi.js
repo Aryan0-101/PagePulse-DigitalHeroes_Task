@@ -1,9 +1,10 @@
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:4000';
 
 export async function auditUrl(url) {
+  const cleanBaseUrl = API_BASE_URL.replace(/\/+$/, '');
   let response;
   try {
-    response = await fetch(`${API_BASE_URL}/audit`, {
+    response = await fetch(`${cleanBaseUrl}/audit`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ url }),
