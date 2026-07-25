@@ -35,7 +35,7 @@ Page Pulse lets a user paste in any web address and get back a quick "health che
 - Whether its images have accessible alt text
 - Roughly how much text is on the page
 
-The intended workflow is deliberately simple: **one input, one button, one report.** There is no login, no history, no configuration — you audit a URL and read the result. If something goes wrong (a bad URL, a page that never responds, a page that isn't HTML at all), the tool explains what happened in plain language instead of crashing or showing a raw error.
+The intended workflow is deliberately simple: **one input, one button, one report.**. If something goes wrong (a bad URL, a page that never responds, a page that isn't HTML at all), the tool explains what happened in plain language instead of crashing or showing a raw error.
 
 ## 2. Features
 
@@ -49,31 +49,27 @@ The intended workflow is deliberately simple: **one input, one button, one repor
 
 ## 3. Technology Overview
 
-This section assumes no prior familiarity with any of these tools.
-
 ### Backend framework — Express
 
-**What it is:** Express is a minimal web framework for Node.js. It lets you define routes (e.g. "when a `POST` request arrives at `/audit`, run this function") without writing raw socket-handling code.
+**Express** lets you define routes (e.g. "when a `POST` request arrives at `/audit`, run this function") without writing raw socket-handling code.
 
-**Why it's used:** The backend only needs one real endpoint. Express gives us routing, JSON request/response handling, and middleware (like CORS) with almost no boilerplate — appropriate for a small, focused API.
+Express is the outermost layer. `src/server.js` creates the Express app, and `src/api/auditRoutes.js` defines the `/audit` route that the frontend talks to.
 
-**Role in this project:** Express is the outermost layer. `src/server.js` creates the Express app, and `src/api/auditRoutes.js` defines the `/audit` route that the frontend talks to.
+The backend only needs one real endpoint. Express gives us routing, JSON request/response handling, and middleware (like CORS) with almost no boilerplate — appropriate for a small, focused API.
 
 ### HTTP client — the native `fetch` API
 
-**Purpose:** Something has to actually go out onto the internet, request the target page, and bring back its HTML. That's the fetcher's job (`src/services/fetcher/index.js`), and it uses Node's built-in `fetch` (available natively since Node 18) rather than an external HTTP library.
+Something has to actually go out onto the internet, request the target page, and bring back its HTML. That's the fetcher's job (`src/services/fetcher/index.js`), and it uses Node's built-in `fetch` rather than an external HTTP library.
 
-**Request lifecycle:** A request is started with an `AbortController` wired to an 8-second timeout. If the server responds, we record how long that took, check the `Content-Type` header, and — only if it claims to be HTML — read the response body as text.
+A request is started with an `AbortController` wired to an 8-second timeout. If the server responds, we record how long that took, check the `Content-Type` header, and — only if it claims to be HTML — read the response body as text.
 
-**Timeout behavior:** If 8 seconds pass with no response, the `AbortController` cancels the in-flight request, `fetch` rejects with an `AbortError`, and the fetcher turns that into a friendly `TimeoutError` ("The website took too long to respond.").
+If 8 seconds pass with no response, the `AbortController` cancels the in-flight request, `fetch` rejects with an `AbortError`, and the fetcher turns that into a friendly `TimeoutError` ("The website took too long to respond.").
 
 ### HTML parser — Cheerio
 
-**DOM:** A DOM (Document Object Model) is a tree representation of an HTML document — `<html>` contains `<head>` and `<body>`, which contain further nested elements. Browsers build a DOM so JavaScript can query and manipulate a page; Page Pulse needs the same tree structure, just without a browser.
+Cheerio takes a raw HTML string and parses it into a DOM-like tree, then exposes a jQuery-style API (`$('h1')`, `$('title').text()`, etc.) to query that tree. It is intentionally *not* a full browser — it does not execute JavaScript or apply CSS — it only parses markup, which makes it fast and lightweight for server-side use.
 
-**Parsing process:** Cheerio takes a raw HTML string and parses it into a DOM-like tree, then exposes a jQuery-style API (`$('h1')`, `$('title').text()`, etc.) to query that tree. It is intentionally *not* a full browser — it does not execute JavaScript or apply CSS — it only parses markup, which makes it fast and lightweight for server-side use.
-
-**Data extraction:** `src/services/parser/index.js` uses Cheerio selectors to pull out the title, meta description, count headings and images, and reduce the page's visible text down to a word count.
+`src/services/parser/index.js` uses Cheerio selectors to pull out the title, meta description, count headings and images, and reduce the page's visible text down to a word count.
 
 ### Frontend framework — React (with Vite)
 

@@ -1,40 +1,38 @@
 :root {
-  --surface: #f8f9ff;
-  --surface-container-lowest: #ffffff;
-  --surface-container-low: #eff4ff;
-  --surface-container: #e5eeff;
-  --surface-variant: #d3e4fe;
-  --on-surface: #0b1c30;
-  --on-surface-variant: #434653;
-  --outline: #737784;
-  --outline-variant: #c3c6d5;
+  /* Surfaces */
+  --bg: oklch(98% 0.004 258);
+  --surface: oklch(100% 0 0);
+  --ink: oklch(18% 0.02 258);
+  --ink-muted: oklch(40% 0.02 258);
+  --ink-faint: oklch(52% 0.015 258);
+  --rule: oklch(89% 0.006 258);
+  --rule-strong: oklch(78% 0.008 258);
 
-  --primary: #003c90;
-  --on-primary: #ffffff;
-  --primary-fixed-dim: #b0c6ff;
-  --on-primary-fixed-variant: #00419c;
-  --primary-container: #0f52ba;
-  --on-primary-container: #bcceff;
+  /* Single brand accent — used for primary actions, focus, links, and the "Good" score band only */
+  --accent: oklch(38% 0.14 258);
+  --accent-hover: oklch(32% 0.14 258);
+  --accent-ink: oklch(100% 0 0);
+  --accent-wash: oklch(94% 0.02 258);
 
-  --secondary-container: #6cf8bb;
-  --on-secondary-container: #00714d;
+  /* Semantic score bands (data-driven, not decorative) */
+  --score-excellent: oklch(45% 0.14 165);
+  --score-good: var(--accent);
+  --score-fair: oklch(55% 0.16 70);
+  --score-poor: oklch(48% 0.19 25);
+  --score-poor-wash: oklch(95% 0.03 25);
 
-  --tertiary: #5c3800;
-  --tertiary-fixed: #ffddb8;
-  --tertiary-fixed-dim: #ffb95f;
-  --on-tertiary-fixed: #2a1700;
-
-  --error: #ba1a1a;
-  --error-container: #ffdad6;
-  --on-error-container: #93000a;
+  /* Error */
+  --error: oklch(48% 0.19 25);
+  --error-wash: oklch(96% 0.02 25);
+  --error-border: oklch(82% 0.08 25);
 
   --font-body: 'Geist', system-ui, 'Segoe UI', Roboto, sans-serif;
   --font-mono: 'Geist Mono', ui-monospace, Consolas, monospace;
 
-  font: 16px/150% var(--font-body);
+  font: 16px/1.5 var(--font-body);
   color-scheme: light;
-  color: var(--on-surface);
-  background: var(--surface);
+  color: var(--ink);
+  background: var(--bg);
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
 }
@@ -54,14 +52,25 @@ body {
 }
 
 h1, h2, h3 {
-  color: var(--on-surface);
+  color: var(--ink);
   font-weight: 600;
   margin: 0;
+  text-wrap: balance;
 }
 
-.material-symbols-outlined {
-  font-family: 'Material Symbols Outlined';
-  font-variation-settings: 'FILL' 0, 'wght' 500, 'GRAD' 0, 'opsz' 24;
-  font-size: 20px;
-  line-height: 1;
+p {
+  text-wrap: pretty;
+}
+
+a {
+  color: var(--accent);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
 }

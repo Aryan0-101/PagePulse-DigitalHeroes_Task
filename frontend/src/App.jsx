@@ -51,9 +51,9 @@ function App() {
 
       <main className="app-main">
         <div className="hero">
-          <h1 className="hero__title">Audit any URL in seconds</h1>
+          <h1 className="hero__title">A precise read on any page.</h1>
           <p className="hero__subtitle">
-            Get instant insights into SEO, performance, and accessibility. Enter a URL below to start analyzing.
+            Enter a URL. We check its response, structure, and accessibility, then hand back a scored report.
           </p>
         </div>
 
